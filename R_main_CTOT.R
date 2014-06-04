@@ -25,6 +25,39 @@ dat.RF = as.matrix(dat.RF[,-1])
 datvalid = read.csv("CMVdata_validation18_log2ratio.csv", check.names = F, head = T)
 head(datvalid[,1:5])
 
+################## 
+######## Descriptive analysis for log ratios of relative frequencies
+######## survival outcome matrix Y
+colnames(dat)[1:2] # [1] "offprophyCMVfreedays" "CMVstatus" 
+Y = Surv(dat[,1], dat[,2]) 
+## Median (off-prophylaxis) follow-up time among censored
+summary(Y[Y[,2]==0,1])
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 107.0   350.8   534.0   597.3   781.5  1761.0 
+## Median (off-prophylaxis) follow-up time 
+plot(survfit(Surv(Y[,1],1-Y[,2]) ~ 1))
+survfit(Surv(Y[,1],1-Y[,2]) ~ 1) # reverse Kaplan-Meier estimate
+# same as summary(survfit(Surv(Y[,1],1-Y[,2]) ~ 1))$table[5]
+# records   n.max n.start  events  median 0.95LCL 0.95UCL 
+# 44      44      44      32     539     502     777 
+######### repeat the same thing for the validation cohort of 18 patients
+## Median (off-prophylaxis) follow-up time among censored n=15
+summary((datvalid$cmv_freedays - datvalid$Total_prophy_days)[datvalid$CMVstatus==0])
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    # 1.0    85.5   154.0   156.0   207.5   373.0 
+## Median (off-prophylaxis) follow-up time 
+plot(survfit(Surv(datvalid$cmv_freedays - datvalid$Total_prophy_days,1-datvalid$CMVstatus) ~ 1))
+survfit(Surv(datvalid$cmv_freedays - datvalid$Total_prophy_days,1-datvalid$CMVstatus) ~ 1) # reverse Kaplan-Meier estimate
+# same as summary(survfit(Surv(datvalid$cmv_freedays - datvalid$Total_prophy_days,1-datvalid$CMVstatus) ~ 1))$table[5]
+# records   n.max n.start  events  median 0.95LCL 0.95UCL 
+     # 18      18      18      15     154     151     274 
+
+######## univariate analysis - concordance and score test
+(conc.pv.44 <- t(sapply(data.frame(dat[, -c(1:2)], check.names = F), function(x) {s = summary(coxph(Y ~ x)); c(s$concordance, sctest = s$sctest[c("df", "pvalue")])})))[order(conc.pv.44[,4]),]
+as.matrix((conc.pv2.44 <- sapply(data.frame(dat[, -c(1:2)], check.names = F), function(x) wilcox.test(x~Y[,2])$p.))[order(conc.pv2.44)])
+conc.pv.44[order(conc.pv.44[,4]),]
+# write.csv(conc.pv.44[order(conc.pv.44[,4]),], file = "table_univariate.csv", row.names = T)
+
 ################################## 
 ######## Descriptive analysis using relative frequencies (not log ratios of relative frequencies)
 RF.basic = dat.RF[, 5:68] # 64 cell subsets 
@@ -87,40 +120,6 @@ barplot_ratio(c(t(exp(diff.CD8.ie1[, combinations.ordered]))), XLAB = "", YAXT =
 title(main = "CD8+ IE-1 stimulation", xlab = "CMV-/CMV+ ratio")
 dev.off()
 #########
-
-################## 
-######## Descriptive analysis for log ratios of relative frequencies
-
-######## survival outcome matrix Y
-colnames(dat)[1:2] # [1] "offprophyCMVfreedays" "CMVstatus" 
-Y = Surv(dat[,1], dat[,2]) 
-## Median (off-prophylaxis) follow-up time among censored
-summary(Y[Y[,2]==0,1])
-# Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-# 107.0   350.8   534.0   597.3   781.5  1761.0 
-## Median (off-prophylaxis) follow-up time 
-plot(survfit(Surv(Y[,1],1-Y[,2]) ~ 1))
-survfit(Surv(Y[,1],1-Y[,2]) ~ 1) # reverse Kaplan-Meier estimate
-# same as summary(survfit(Surv(Y[,1],1-Y[,2]) ~ 1))$table[5]
-# records   n.max n.start  events  median 0.95LCL 0.95UCL 
-# 44      44      44      32     539     502     777 
-######### repeat the same thing for the validation cohort of 18 patients
-## Median (off-prophylaxis) follow-up time among censored n=15
-summary((datvalid$cmv_freedays - datvalid$Total_prophy_days)[datvalid$CMVstatus==0])
-   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    # 1.0    85.5   154.0   156.0   207.5   373.0 
-## Median (off-prophylaxis) follow-up time 
-plot(survfit(Surv(datvalid$cmv_freedays - datvalid$Total_prophy_days,1-datvalid$CMVstatus) ~ 1))
-survfit(Surv(datvalid$cmv_freedays - datvalid$Total_prophy_days,1-datvalid$CMVstatus) ~ 1) # reverse Kaplan-Meier estimate
-# same as summary(survfit(Surv(datvalid$cmv_freedays - datvalid$Total_prophy_days,1-datvalid$CMVstatus) ~ 1))$table[5]
-# records   n.max n.start  events  median 0.95LCL 0.95UCL 
-     # 18      18      18      15     154     151     274 
-
-######## univariate analysis - concordance and score test
-(conc.pv.44 <- t(sapply(data.frame(dat[, -c(1:2)], check.names = F), function(x) {s = summary(coxph(Y ~ x)); c(s$concordance, sctest = s$sctest[c("df", "pvalue")])})))[order(conc.pv.44[,4]),]
-as.matrix((conc.pv2.44 <- sapply(data.frame(dat[, -c(1:2)], check.names = F), function(x) wilcox.test(x~Y[,2])$p.))[order(conc.pv2.44)])
-conc.pv.44[order(conc.pv.44[,4]),]
-# write.csv(conc.pv.44[order(conc.pv.44[,4]),], file = "table_univariate.csv", row.names = T)
 
 ######################
 ######## log ratio variables for main analysis
@@ -209,16 +208,15 @@ set.seed(103);cv.basic.pp65 = run.cv(x = LR.basic.pp65, y = Y, family = family, 
 set.seed(104);cv.matu = run.cv(x = LR.matu, y = Y, family = family, nrepeat = 10, nfolds = 5) 
 set.seed(105);cv.matu.ie1 = run.cv(x = LR.matu.ie1, y = Y, family = family, nrepeat = 10, nfolds = 5) 
 set.seed(106);cv.matu.pp65 = run.cv(x = LR.matu.pp65, y = Y, family = family, nrepeat = 10, nfolds = 5) 
-set.seed(107);cv.INT.basic.pp65 = run.cv(x = LR.INT.basic.pp65, y = Y, family = family, nrepeat = 10, nfolds = 5)
 
 # resubstitution c-index etc (values saved as "table_resubstitution....txt")
-my.perf(fit.object.list = list(fit.CD8IFNg.ie1, fit.CD8IFNg, fit.basic, fit.basic.ie1, fit.basic.pp65, fit.matu, fit.matu.ie1, fit.matu.pp65, fit.INT.basic.pp65), 
-        fit.name.list = list("CD8 IFNg IE-1", "CD8 IFNg", "basic", "basic IE-1", "basic pp65", "maturational", "maturational IE-1", "maturational pp65", "basic pp65 with interactions"), 
+my.perf(fit.object.list = list(fit.CD8IFNg.ie1, fit.CD8IFNg, fit.basic, fit.basic.ie1, fit.basic.pp65, fit.matu, fit.matu.ie1, fit.matu.pp65), 
+        fit.name.list = list("CD8 IFNg IE-1", "CD8 IFNg", "basic", "basic IE-1", "basic pp65", "maturational", "maturational IE-1", "maturational pp65"), 
         prefix = "resubstitution_updated_", type.response = "time-to-event", label = Y[,"status"], timelabel = Y[, "time"], is.cv = F, plot.se = F)
 
 # average cross-validation c-index (values saved as "table_cv_....txt", a plot saved as "plot_ROC_...pdf")
-set.seed(100);my.perf(fit.object.list = list(cv.CD8IFNg, cv.basic, cv.basic.ie1, cv.basic.pp65, cv.matu, cv.matu.ie1, cv.matu.pp65, cv.INT.basic.pp65), 
-        fit.name.list = list("CD8 IFNg", "basic", "basic IE-1", "basic pp65", "maturational", "maturational IE-1", "maturational pp65", "basic pp65 with interactions"), 
+set.seed(100);my.perf(fit.object.list = list(cv.CD8IFNg, cv.basic, cv.basic.ie1, cv.basic.pp65, cv.matu, cv.matu.ie1, cv.matu.pp65), 
+        fit.name.list = list("CD8 IFNg", "basic", "basic IE-1", "basic pp65", "maturational", "maturational IE-1", "maturational pp65"), 
         prefix = "cv_updated_", type.response = "time-to-event", label = Y[,"status"], timelabel = Y[, "time"], is.cv = T, plot.se = F)
 set.seed(200);my.perf(fit.object.list = list(cv.CD8IFNg.ie1), 
         fit.name.list = list("CD8 IFNg IE-1"), 
